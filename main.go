@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/go-chi/chi/v5"
+	chi "github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -28,8 +28,8 @@ func main() {
 	}
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
-	router.Post("/login", security.Login)
-	router.Get("/create", handlers.CreateUserHandler)
+	router.Put("/login", security.Login)
+	router.Post("/create", handlers.CreateUserHandler)
 	router.Get("/get/{id}", handlers.GetUserHandler)
 	router.Get("/getall", handlers.GetAllUsersHandler)
 	log.Info().Msg("server  starting listening on port " + port)

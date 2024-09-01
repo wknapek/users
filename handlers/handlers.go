@@ -3,7 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog/log"
 	"main/model"
 	"main/security"
@@ -11,9 +11,20 @@ import (
 	"net/http"
 )
 
+var ValidateHandler *validator.Validate
+
+func init() {
+	ValidateHandler = validator.New()
+}
+
 func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	res := security.VerifyToken(w, r)
+	tokenString := r.Header.Get("Authorization")
+	if tokenString == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	res := security.VerifyToken(tokenString)
 	if res != http.StatusOK {
 		if res == http.StatusUnauthorized {
 			w.WriteHeader(http.StatusUnauthorized)
@@ -27,10 +38,16 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	u := model.User{}
-	err := json.NewDecoder(r.Body).Decode(&u)
+	err := json.NewEncoder(w).Encode(u)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Info().Msg("Could not decode body")
+		return
+	}
+	err = ValidateHandler.Struct(u)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Error().Err(err).Msg("Error validating user")
 		return
 	}
 	mgr := *usermanager.GetUserManager()
@@ -46,7 +63,12 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 
 func GetUserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	res := security.VerifyToken(w, r)
+	tokenString := r.Header.Get("Authorization")
+	if tokenString == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	res := security.VerifyToken(tokenString)
 	if res != http.StatusOK {
 		if res == http.StatusUnauthorized {
 			w.WriteHeader(http.StatusUnauthorized)
@@ -59,7 +81,7 @@ func GetUserHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	id := chi.URLParam(r, "id")
+	id := r.URL.Query().Get("id")
 	mgr := *usermanager.GetUserManager()
 	err, usr := mgr.GetUserByID(id)
 	if err != nil {
@@ -67,19 +89,24 @@ func GetUserHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "user not found")
 		return
 	}
-	err = json.NewEncoder(w).Encode(usr)
+	bytes, err := json.Marshal(usr)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "could not encncode user")
-		log.Error().Err(err).Msg("could not encode user")
+		fmt.Fprint(w, "Could not encode body")
 		return
 	}
+	fmt.Fprint(w, string(bytes))
 	w.WriteHeader(http.StatusOK)
 }
 
 func GetAllUsersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	res := security.VerifyToken(w, r)
+	tokenString := r.Header.Get("Authorization")
+	if tokenString == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	res := security.VerifyToken(tokenString)
 	if res != http.StatusOK {
 		if res == http.StatusUnauthorized {
 			w.WriteHeader(http.StatusUnauthorized)

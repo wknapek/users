@@ -30,8 +30,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Info().Msg(fmt.Sprintf("The user request value %v", u))
 
-	if u.Username == "Chek" && u.Password == "123456" {
-		tokenString, err := CreateToken(u.Username)
+	if u.Username == "admin" && u.Password == "test" {
+		tokenString, err := createToken(u.Username)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			log.Error().Msg("CreateToken")
@@ -46,21 +46,17 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func VerifyToken(w http.ResponseWriter, r *http.Request) int {
-	tokenString := r.Header.Get("Authorization")
-	if tokenString == "" {
-		return http.StatusBadRequest
-	}
-	tokenString = tokenString[len("Bearer "):]
+func VerifyToken(token string) int {
+	token = token[len("Bearer "):]
 
-	err := verifyToken(tokenString)
+	err := verifyToken(token)
 	if err != nil {
 		return http.StatusUnauthorized
 	}
 	return http.StatusOK
 }
 
-func CreateToken(username string) (string, error) {
+func createToken(username string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
 		jwt.MapClaims{
 			"username": username,
