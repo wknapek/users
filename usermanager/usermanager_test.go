@@ -3,11 +3,12 @@ package usermanager
 import (
 	"github.com/stretchr/testify/assert"
 	"main/model"
+	"sync"
 	"testing"
 )
 
 func TestAdd(t *testing.T) {
-	usrMgr := UserManager{map[string]model.User{}}
+	usrMgr := UserManager{new(sync.Map)}
 	err := usrMgr.AddUser(model.User{
 		ID:         "testID",
 		Name:       "TestName",
@@ -23,7 +24,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestGetID(t *testing.T) {
-	usrMgr := UserManager{map[string]model.User{}}
+	usrMgr := UserManager{new(sync.Map)}
 	err := usrMgr.AddUser(model.User{
 		ID:         "testID",
 		Name:       "TestName",
@@ -37,7 +38,7 @@ func TestGetID(t *testing.T) {
 }
 
 func TestGetAll(t *testing.T) {
-	usrMgr := UserManager{map[string]model.User{}}
+	usrMgr := UserManager{new(sync.Map)}
 	err := usrMgr.AddUser(model.User{
 		ID:         "testID",
 		Name:       "TestName",
@@ -50,5 +51,10 @@ func TestGetAll(t *testing.T) {
 		SignUpTime: 3,
 	})
 	assert.NoError(t, err)
-	assert.Len(t, usrMgr.users, 2)
+	var count int
+	usrMgr.users.Range(func(key, value any) bool {
+		count++
+		return true
+	})
+	assert.Equal(t, count, 2)
 }

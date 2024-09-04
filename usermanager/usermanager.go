@@ -12,37 +12,42 @@ var (
 )
 
 type UserManager struct {
-	users map[string]model.User
+	users *sync.Map
 }
 
 func GetUserManager() *UserManager {
 	once.Do(func() {
-		instance = &UserManager{users: make(map[string]model.User)}
+		instance = &UserManager{users: new(sync.Map)}
 	})
 	return instance
 }
 
 func (u *UserManager) AddUser(user model.User) error {
-	_, ok := u.users[user.ID]
+	_, ok := u.users.Load(user.ID)
 	if ok {
 		return fmt.Errorf("user %s already exists", user.ID)
 	}
-	u.users[user.ID] = user
+	u.users.Store(user.ID, user)
 	return nil
 }
 
 func (u *UserManager) GetUserByID(userID string) (error, *model.User) {
-	usr, ok := u.users[userID]
+	usr, ok := u.users.Load(userID)
 	if !ok {
 		return fmt.Errorf("user with id %s not exist", userID), nil
 	}
-	return nil, &usr
+	retUsr, ok := usr.(model.User)
+	if !ok {
+		return fmt.Errorf("error casting user"), nil
+	}
+	return nil, &retUsr
 }
 
 func (u *UserManager) GetAllUsers() []model.User {
 	var users []model.User
-	for _, user := range u.users {
-		users = append(users, user)
-	}
+	u.users.Range(func(k, v interface{}) bool {
+		users = append(users, v.(model.User))
+		return true
+	})
 	return users
 }
